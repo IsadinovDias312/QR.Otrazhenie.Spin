@@ -135,24 +135,24 @@ void SpinTriangle(int n, double *mat)
     }
 }
 
-void toQR(int n, double *mas, double *x1, double *x2)
+void toQR(int start, int end, int n, double *mas, double *x1, double *x2)
 {
-    cout << " --- \n";
-    cout << mas[(n - 2) * n + n - 2] << "\n";
-    for (int i = 0; i < n - 1; i++) {
+     //cout << " --- \n";
+    // cout << mas[(n - 2) * n + n - 2] << "\n";
+    for (int i = start; i < end - 1; i++) {
         double s = mas[(i + 1) * n + i] * mas[(i + 1) * n + i];
         double normA = sqrt(mas[i * n + i] * mas[i * n + i] + s);
         x1[i] = mas[i * n + i] - normA;
         x2[i] = mas[(i + 1) * n + i];
         double normX = sqrt(x1[i] * x1[i] + s);
-        cout << normX << " -- normX\n"
-             << x1[i] << " " << x2[i] << " " << mas[i * n + i] << "\n";
+        // cout << normX << " -- normX\n"
+        //     << x1[i] << " " << x2[i] << " " << mas[i * n + i] << "\n";
         x1[i] /= normX;
         x2[i] /= normX;
         double u11 = 1 - 2 * x1[i] * x1[i];
         double u12 = (-2) * x1[i] * x2[i];
         double u22 = 1 - 2 * x2[i] * x2[i];
-        for (int j = i; j < n; j++) {
+        for (int j = i; j < end; j++) {
             double tmp1 = u11 * mas[i * n + j] + u12 * mas[(i + 1) * n + j];
             double tmp2 = u12 * mas[i * n + j] + u22 * mas[(i + 1) * n + j];
             mas[i * n + j] = tmp1;
@@ -161,7 +161,55 @@ void toQR(int n, double *mas, double *x1, double *x2)
     }
 }
 
-void eigenvalues(int n, double *mas, double *eigen)
+
+void Iteration(int start, int end, int n, double *mas, double *x1, double *x2,
+               double strochA, int &iter)
+{
+    if (end - start == 1) {
+        return;
+    } else if (end - start == 2) {
+        //cout << "ku\n" << mas[start * n + start] << " " << mas[(start + 1) * n + start + 1] << "\n";
+        //cout << "ku\n" << mas[start * n + start + 1] << " " << mas[(start + 1) * n + start] << "\n";
+        double tr = mas[start * n + start] + mas[(start + 1) * n + start + 1];
+        double det = mas[start * n + start] * mas[(start + 1) * n + start + 1] -
+                     mas[start * n + start + 1] * mas[(start + 1) * n + start];
+        //cout << tr << " " << det << "\n";
+        mas[start * n + start] = (tr + sqrt(fabs(tr * tr - 4 * det))) / 2.;
+        mas[(start + 1) * n + start + 1] = (tr - sqrt(fabs(tr * tr - 4 * det))) / 2.;
+        return;
+    } else {
+        iter++;
+        toQR(start, end, n, mas, x1, x2);
+        //printMatrix(n, mas, n);
+        //cout <<"\n";
+        for (int i = start; i < end - 1; i++) {
+            double u11 = 1 - 2 * x1[i] * x1[i];
+            double u12 = (-2) * x1[i] * x2[i];
+            double u22 = 1 - 2 * x2[i] * x2[i];
+            for (int j = start; j < i + 2; j++) {
+                double tmp1 = mas[j * n + i] * u11 + u12 * mas[j * n + i + 1];
+                double tmp2 = mas[j * n + i] * u12 + u22 * mas[j * n + i + 1];
+                mas[j * n + i] = tmp1;
+                mas[j * n + i + 1] = tmp2;
+            }
+        }
+        printMatrix(n, mas, n);
+        cout <<"\n";
+        int prev = start;
+        for (int i = start; i < end - 1; i++) {
+            if (fabs(mas[(i + 1) * n + i]) < strochA) {
+                mas[(i + 1) * n + i] = 0;
+                Iteration(prev, i + 1, n, mas, x1, x2, strochA, iter);
+                prev = i + 1;
+            }
+        }
+        //printMatrix(n, mas, n);
+        //cout << "\n";
+        Iteration(prev, end, n, mas, x1, x2, strochA, iter);
+    }
+}
+
+int eigenvalues(int n, double *mas, double *eigen, double eps)
 {
     SpinTriangle(n, mas);
     cout << "Triangled:\n";
@@ -174,23 +222,25 @@ void eigenvalues(int n, double *mas, double *eigen)
         x1[i] = 0;
         x2[i] = 0;
     }
-    for (int s = 0; s < FIVE; s++) {
-        toQR(n, mas, x1, x2);
-        for (int i = 0; i < n - 1; i++) {
-            double u11 = 1 - 2 * x1[i] * x1[i];
-            double u12 = (-2) * x1[i] * x2[i];
-            double u22 = 1 - 2 * x2[i] * x2[i];
-            for (int j = 0; j < i + 2; j++) {
-                double tmp1 = mas[j * n + i] * u11 + u12 * mas[j * n + i + 1];
-                double tmp2 = mas[j * n + i] * u12 + u22 * mas[j * n + i + 1];
-                mas[j * n + i] = tmp1;
-                mas[j * n + i + 1] = tmp2;
-            }
+    int iter = 0;
+    double strochA = residual(n, mas) * eps;
+    int prev = 0;
+    for (int i = 0; i < n - 1; i++) {
+        if (fabs(mas[(i + 1) * n + i]) < strochA) {
+            mas[(i + 1) * n + i] = 0;
+            //cout << i << " here?\n";
+            Iteration(prev, i + 1, n, mas, x1, x2, strochA, iter);
+            //cout << "here.\n";
+            prev = i + 1;
         }
     }
+    //cout << "hau\n";
+    Iteration(prev, n, n, mas, x1, x2, strochA, iter);
+
     for (int s = 0; s < n; s++) {
         eigen[s] = mas[s * n + s];
     }
+    return iter;
 }
 
 bool is_zero(const double *mas, int size)
@@ -276,54 +326,17 @@ double residual2(int n, double *eigen, double *mat)
     return res;
 }
 
-double *MatOnMat(int n, const double *mas, const double *mat)
+double residual(int size, const double *mas)
 {
-    double *rez;
-    rez = new double[n * n];
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            rez[i * n + j] = 0.;
-            for (int k = 0; k < n; k++) {
-                rez[i * n + j] += mas[i * n + k] * mat[k * n + j];
-            }
-        }
-    }
-    return rez;
-}
-
-double *MatMinusMat(int size, const double *mas, const double *mat)
-{
-    double *rez;
-    rez = new double[size * size];
-    for (int i = 0; i < size; i++) {
-        for (int j = 0; j < size; j++) {
-            rez[i * size + j] = mas[i * size + j] - mat[i * size + j];
-        }
-    }
-    return rez;
-}
-
-double residual(int size, const double *mas, const double *mat)
-{
-    double *id;
-    id = new double[size * size];
-    GenerateId(size, id);
-    double *ed;
-    double *nd;
-    ed = MatOnMat(size, mas, mat);
-    nd = MatMinusMat(size, ed, id);
-    delete[] id;
-    delete[] ed;
     double maxi = 0;
-    for (int j = 0; j < size; j++) {
+    for (int i = 0; i < size; i++) {
         double maybemaxi = 0;
-        for (int i = 0; i < size; i++) {
-            maybemaxi += fabs(nd[i * size + j]);
+        for (int j = 0; j < size; j++) {
+            maybemaxi += fabs(mas[i * size + j]);
         }
         if (maybemaxi > maxi) {
             maxi = maybemaxi;
         }
     }
-    delete[] nd;
     return maxi;
 }

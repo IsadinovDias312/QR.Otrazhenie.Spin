@@ -6,13 +6,42 @@ int main(int argc, char **argv)
 {
     unsigned long long time = 0;
 
-    if (argc < 4 || argc > FIVE) {
+    if (argc < FIVE || argc > FIVE + 1) {
         cout << "Incorrect number of arguments of comand line \n";
         return -1;
     }
     int n = atoi(argv[1]);
     int m = atoi(argv[2]);
-    int k = atoi(argv[3]);
+
+    double eps;
+    int ps;
+
+    if (int(strlen(argv[3])) < 4 || int(strlen(argv[3])) > 5) {
+        return -1;
+    }
+    if (int(argv[3][0]) < 49 || int(argv[3][0]) > 57) {
+        return -1;
+    }
+    int e = int(argv[3][0]) - 48;
+    if (argv[3][1] != 'e' || argv[3][2] != '-') {
+        return -1;
+    }
+    if (int(argv[3][3]) < 49 || int(argv[3][3]) > 57) {
+        return -1;
+    }
+    if (int(strlen(argv[3])) == 4) {
+        ps = int(argv[3][3]) - 48;
+    }
+    else {
+        if (int(argv[3][4]) < 48 || int(argv[3][4]) > 57) {
+            return -1;
+        }
+        ps = (int(argv[3][3]) - 48) * 10 + (int(argv[3][4]) - 48);
+    }
+    eps = e / pow(10, ps);
+    //cout << eps << "\n";
+
+    int k = atoi(argv[4]);
     if (n <= 0 || m <= 0 || n < m) {
         return -1;
     }
@@ -22,11 +51,11 @@ int main(int argc, char **argv)
     double *mat;
     mat = new double[n * n];
     if (k == 0) {
-        if (argc == 4) {
+        if (argc == FIVE) {
             delete[] mat;
             return -1;
         }
-        bool error3 = kfile(n, mat, argv[4]);
+        bool error3 = kfile(n, mat, argv[FIVE]);
         if (!error3) {
             delete[] mat;
             return -3;
@@ -59,7 +88,7 @@ int main(int argc, char **argv)
         eigen[i] = 0;
     }
     time = currentTimeNano();
-    eigenvalues(n, mat_tmp, eigen);
+    int iter = eigenvalues(n, mat_tmp, eigen, eps);
     time = currentTimeNano() - time;
 
     cout << "Eigenvalues:\n  ";
@@ -72,6 +101,7 @@ int main(int argc, char **argv)
     double res2 = residual2(n, eigen, mat);
     cout << "Residual1: " << res1 << "\n";
     cout << "Residual2: " << res2 << "\n";
+    cout << "Iterations: " << iter << "\n";
 
     delete[] mat_tmp;
     delete[] mat;
