@@ -16,30 +16,28 @@ int main(int argc, char **argv)
     double eps;
     int ps;
 
-    if (int(strlen(argv[3])) < 4 || int(strlen(argv[3])) > 5) {
+    if (int(strlen(argv[3])) < 4 || int(strlen(argv[3])) > FIVE) {
         return -1;
     }
-    if (int(argv[3][0]) < 49 || int(argv[3][0]) > 57) {
+    if (int(argv[3][0]) < '1' || int(argv[3][0]) > '9') {
         return -1;
     }
-    int e = int(argv[3][0]) - 48;
+    int e = int(argv[3][0]) - '0';
     if (argv[3][1] != 'e' || argv[3][2] != '-') {
         return -1;
     }
-    if (int(argv[3][3]) < 49 || int(argv[3][3]) > 57) {
+    if (int(argv[3][3]) < '1' || int(argv[3][3]) > '9') {
         return -1;
     }
     if (int(strlen(argv[3])) == 4) {
-        ps = int(argv[3][3]) - 48;
-    }
-    else {
-        if (int(argv[3][4]) < 48 || int(argv[3][4]) > 57) {
+        ps = int(argv[3][3]) - '0';
+    } else {
+        if (int(argv[3][4]) < '0' || int(argv[3][4]) > '9') {
             return -1;
         }
-        ps = (int(argv[3][3]) - 48) * 10 + (int(argv[3][4]) - 48);
+        ps = (int(argv[3][3]) - '0') * (FIVE + FIVE) + (int(argv[3][4]) - '0');
     }
-    eps = e / pow(10, ps);
-    //cout << eps << "\n";
+    eps = e / pow((FIVE + FIVE), ps);
 
     int k = atoi(argv[4]);
     if (n <= 0 || m <= 0 || n < m) {
@@ -99,10 +97,11 @@ int main(int argc, char **argv)
     printf("Time: %llu ns\n", time);
     double res1 = residual1(n, eigen, mat);
     double res2 = residual2(n, eigen, mat);
-    cout << "Residual1: " << res1 << "\n";
-    cout << "Residual2: " << res2 << "\n";
+    cout << "Residual 1: " << res1 << "\n";
+    cout << "Residual 2: " << res2 << "\n";
     cout << "Iterations: " << iter << "\n";
 
+    delete[] eigen;
     delete[] mat_tmp;
     delete[] mat;
     return 0;

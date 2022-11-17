@@ -88,8 +88,8 @@ void SpinTriangle(int n, double *mat)
             sin[k] = 0;
         }
         for (int k = i + 1; k < n; k++) {
-            while (fabs(mat[i * n + i - 1]) < EPS &&
-                   fabs(mat[k * n + i - 1]) < EPS && k != n) {
+            while (k != n && fabs(mat[i * n + i - 1]) < EPS &&
+                   fabs(mat[k * n + i - 1]) < EPS) {
                 k++;
             }
             if (k == n) {
@@ -137,16 +137,12 @@ void SpinTriangle(int n, double *mat)
 
 void toQR(int start, int end, int n, double *mas, double *x1, double *x2)
 {
-     //cout << " --- \n";
-    // cout << mas[(n - 2) * n + n - 2] << "\n";
     for (int i = start; i < end - 1; i++) {
         double s = mas[(i + 1) * n + i] * mas[(i + 1) * n + i];
         double normA = sqrt(mas[i * n + i] * mas[i * n + i] + s);
         x1[i] = mas[i * n + i] - normA;
         x2[i] = mas[(i + 1) * n + i];
         double normX = sqrt(x1[i] * x1[i] + s);
-        // cout << normX << " -- normX\n"
-        //     << x1[i] << " " << x2[i] << " " << mas[i * n + i] << "\n";
         x1[i] /= normX;
         x2[i] /= normX;
         double u11 = 1 - 2 * x1[i] * x1[i];
@@ -161,59 +157,50 @@ void toQR(int start, int end, int n, double *mas, double *x1, double *x2)
     }
 }
 
-
 void Iteration(int start, int end, int n, double *mas, double *x1, double *x2,
                double strochA, int &iter)
 {
     if (end - start == 1) {
         return;
-    } else if (end - start == 2) {
-        //cout << "ku\n" << mas[start * n + start] << " " << mas[(start + 1) * n + start + 1] << "\n";
-        //cout << "ku\n" << mas[start * n + start + 1] << " " << mas[(start + 1) * n + start] << "\n";
+    }
+    if (end - start == 2) {
         double tr = mas[start * n + start] + mas[(start + 1) * n + start + 1];
         double det = mas[start * n + start] * mas[(start + 1) * n + start + 1] -
                      mas[start * n + start + 1] * mas[(start + 1) * n + start];
-        //cout << tr << " " << det << "\n";
-        mas[start * n + start] = (tr + sqrt(fabs(tr * tr - 4 * det))) / 2.;
-        mas[(start + 1) * n + start + 1] = (tr - sqrt(fabs(tr * tr - 4 * det))) / 2.;
+        mas[start * n + start] = (tr + sqrt(tr * tr - 4 * det)) / 2.;
+        mas[(start + 1) * n + start + 1] = (tr - sqrt(tr * tr - 4 * det)) / 2;
         return;
-    } else {
-        iter++;
-        toQR(start, end, n, mas, x1, x2);
-        //printMatrix(n, mas, n);
-        //cout <<"\n";
-        for (int i = start; i < end - 1; i++) {
-            double u11 = 1 - 2 * x1[i] * x1[i];
-            double u12 = (-2) * x1[i] * x2[i];
-            double u22 = 1 - 2 * x2[i] * x2[i];
-            for (int j = start; j < i + 2; j++) {
-                double tmp1 = mas[j * n + i] * u11 + u12 * mas[j * n + i + 1];
-                double tmp2 = mas[j * n + i] * u12 + u22 * mas[j * n + i + 1];
-                mas[j * n + i] = tmp1;
-                mas[j * n + i + 1] = tmp2;
-            }
-        }
-        printMatrix(n, mas, n);
-        cout <<"\n";
-        int prev = start;
-        for (int i = start; i < end - 1; i++) {
-            if (fabs(mas[(i + 1) * n + i]) < strochA) {
-                mas[(i + 1) * n + i] = 0;
-                Iteration(prev, i + 1, n, mas, x1, x2, strochA, iter);
-                prev = i + 1;
-            }
-        }
-        //printMatrix(n, mas, n);
-        //cout << "\n";
-        Iteration(prev, end, n, mas, x1, x2, strochA, iter);
     }
+    if (iter > MILLION) {
+        return;
+    }
+    iter++;
+    toQR(start, end, n, mas, x1, x2);
+    for (int i = start; i < end - 1; i++) {
+        double u11 = 1 - 2 * x1[i] * x1[i];
+        double u12 = (-2) * x1[i] * x2[i];
+        double u22 = 1 - 2 * x2[i] * x2[i];
+        for (int j = start; j < i + 2; j++) {
+            double tmp1 = mas[j * n + i] * u11 + u12 * mas[j * n + i + 1];
+            double tmp2 = mas[j * n + i] * u12 + u22 * mas[j * n + i + 1];
+            mas[j * n + i] = tmp1;
+            mas[j * n + i + 1] = tmp2;
+        }
+    }
+    int prev = start;
+    for (int i = start; i < end - 1; i++) {
+        if (fabs(mas[(i + 1) * n + i]) < strochA) {
+            mas[(i + 1) * n + i] = 0;
+            Iteration(prev, i + 1, n, mas, x1, x2, strochA, iter);
+            prev = i + 1;
+        }
+    }
+    Iteration(prev, end, n, mas, x1, x2, strochA, iter);
 }
 
 int eigenvalues(int n, double *mas, double *eigen, double eps)
 {
     SpinTriangle(n, mas);
-    cout << "Triangled:\n";
-    printMatrix(n, mas, n);
     double *x1;
     double *x2;
     x1 = new double[n - 1];
@@ -228,18 +215,17 @@ int eigenvalues(int n, double *mas, double *eigen, double eps)
     for (int i = 0; i < n - 1; i++) {
         if (fabs(mas[(i + 1) * n + i]) < strochA) {
             mas[(i + 1) * n + i] = 0;
-            //cout << i << " here?\n";
             Iteration(prev, i + 1, n, mas, x1, x2, strochA, iter);
-            //cout << "here.\n";
             prev = i + 1;
         }
     }
-    //cout << "hau\n";
     Iteration(prev, n, n, mas, x1, x2, strochA, iter);
 
     for (int s = 0; s < n; s++) {
         eigen[s] = mas[s * n + s];
     }
+    delete[] x1;
+    delete[] x2;
     return iter;
 }
 
@@ -297,7 +283,7 @@ void printMatrix(int size, const double *mas, int m)
     }
 }
 
-double residual1(int n, double *eigen, double *mat)
+double residual1(int n, const double *eigen, const double *mat)
 {
     double res = 0;
     double eigensum = 0;
@@ -310,14 +296,14 @@ double residual1(int n, double *eigen, double *mat)
     return res;
 }
 
-double residual2(int n, double *eigen, double *mat)
+double residual2(int n, const double *eigen, const double *mat)
 {
     double res = 0;
     double eigensum = 0;
     double trace = 0;
     int n2 = n * n;
     for (int i = 0; i < n2; i++) {
-        trace += mat[i];
+        trace += mat[i] * mat[i];
     }
     for (int i = 0; i < n; i++) {
         eigensum += eigen[i] * eigen[i];

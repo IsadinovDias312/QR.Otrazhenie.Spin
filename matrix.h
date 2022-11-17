@@ -10,6 +10,7 @@
 #define GIGA_MODIFIER 1e9
 #define TEN_THOUSAND 1e4
 #define KILO_MODIFIER 1e3
+#define MILLION 1e6
 #define MICRO_MODIFIER 1e-6
 #define FIVE 5
 
@@ -25,7 +26,7 @@ int eigenvalues(int n, double *mas, double *eigenvalues, double eps);
 
 void printMatrix(int size, const double *mas, int m);
 bool is_zero(const double *mas, int size);
-double residual1(int n, double *eigen, double *mat);
-double residual2(int n, double *eigen, double *mat);
+double residual1(int n, const double *eigen, const double *mat);
+double residual2(int n, const double *eigen, const double *mat);
 
 double residual(int size, const double *mas);
